@@ -1,0 +1,29 @@
+DECLARE
+    v_sql VARCHAR2(4000);
+BEGIN
+    -- Construct the dynamic SQL query
+    SELECT 'SELECT t1.boid, t1.version, LISTAGG(CASE ' ||
+           LISTAGG(
+               ' WHEN t1.' || column_name || ' <> t2.' || column_name || 
+               ' THEN ''' || column_name || '''', ' '
+           ) WITHIN GROUP (ORDER BY column_name) ||
+           ' END, '','') AS mismatched_columns' ||
+           ' FROM (SELECT t1.boid, t1.version, t2.ptf, t2.comment_fo, t2.comment_bo
+                   FROM t_piv_lex_1 t1
+                   JOIN t_piv_lex_2 t2 ON t1.boid = t2.boid AND t1.version = t2.version
+                   JOIN t_piv_lex_xone t3 ON t1.boid = t3.boid AND t1.version = t3.version
+                   WHERE <your_conditions>) t1
+             JOIN t_lex_top_fx_fxo t2 
+             ON t1.boid = t2.boid AND t1.version = t2.version
+             WHERE ' || LISTAGG('t1.' || column_name || ' <> t2.' || column_name, ' OR ') 
+           WITHIN GROUP (ORDER BY column_name) ||
+           ' GROUP BY t1.boid, t1.version'
+    INTO v_sql
+    FROM all_tab_columns 
+    WHERE table_name IN ('T_PIV_LEX_1', 'T_PIV_LEX_2', 'T_PIV_LEX_XONE')
+      AND column_name IN ('PTF', 'COMMENT_FO', 'COMMENT_BO');
+
+    -- Execute the dynamically generated query
+    EXECUTE IMMEDIATE v_sql;
+END;
+/
