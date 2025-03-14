@@ -1,0 +1,32 @@
+import pandas as pd
+
+# Load the CSV files (replace with actual file paths)
+df_table1 = pd.read_csv("table1.csv")  # File containing data from t_piv_lex_1, t_piv_lex_2, t_piv_lex_xone
+df_table2 = pd.read_csv("table2.csv")  # File containing data from t_lex_top_fx_fxo
+
+# Ensure column names are consistent (rename if needed)
+df_table1 = df_table1.rename(columns={'ptf': 'ptf_t1', 'comment_fo': 'comment_fo_t1', 'comment_bo': 'comment_bo_t1'})
+df_table2 = df_table2.rename(columns={'ptf': 'ptf_t2', 'comment_fo': 'comment_fo_t2', 'comment_bo': 'comment_bo_t2'})
+
+# Merge data on 'boid' and 'version'
+df_merged = df_table1.merge(df_table2, on=['boid', 'version'], how='inner')
+
+# Function to check column mismatches
+def find_mismatched_columns(row):
+    mismatched_columns = []
+    for col in ['ptf', 'comment_fo', 'comment_bo']:  # Columns to compare
+        if row[f"{col}_t1"] != row[f"{col}_t2"]:
+            mismatched_columns.append(col)
+    return ', '.join(mismatched_columns) if mismatched_columns else None
+
+# Apply function to each row
+df_merged['mismatched_columns'] = df_merged.apply(find_mismatched_columns, axis=1)
+
+# Filter rows where mismatches exist
+df_mismatches = df_merged[['boid', 'version', 'mismatched_columns']].dropna()
+
+# Print results
+print(df_mismatches)
+
+# Save output to a CSV file (optional)
+df_mismatches.to_csv('mismatched_data.csv', index=False)
