@@ -1,0 +1,9 @@
+def find_mismatched_columns(row):
+    mismatched_columns = []
+    for col in columns_to_compare:
+        val1 = row.get(f"{col}_t1")
+        val2 = row.get(f"{col}_t2")
+        if val1 != val2:
+            # Record column name + values
+            mismatched_columns.append(f"{col}: table1='{val1}' vs table2='{val2}'")
+    return '; '.join(mismatched_columns) if mismatched_columns else None
