@@ -30,3 +30,64 @@ print(df_mismatches)
 
 # Save output to a CSV file (optional)
 df_mismatches.to_csv('mismatched_data.csv', index=False)
+
+
+import pandas as pd
+
+# Load the Excel files (replace with actual file paths)
+df_table1 = pd.read_excel("table1.xlsx", sheet_name="Sheet1")  # Data from joined tables
+df_table2 = pd.read_excel("table2.xlsx", sheet_name="Sheet1")  # Data from t_lex_top_fx_fxo
+
+# Merge data on 'boid' and 'version'
+df_merged = df_table1.merge(df_table2, on=['boid', 'version'], how='inner', suffixes=('_t1', '_t2'))
+
+# Columns to compare
+columns_to_compare = ['ptf', 'comment_fo', 'comment_bo']  # Add all necessary columns
+
+# Function to check column mismatches
+def find_mismatched_columns(row):
+    mismatched_columns = []
+    for col in columns_to_compare:
+        val1 = row.get(f"{col}_t1")
+        val2 = row.get(f"{col}_t2")
+
+        if pd.isna(val1) and pd.isna(val2):  # Ignore if both are NaN
+            continue  
+        
+        val1 = '' if pd.isna(val1) else str(val1).strip()
+        val2 = '' if pd.isna(val2) else str(val2).strip()
+
+        if val1 != val2:
+            mismatched_columns.append(f"{col}: ({val1} ≠ {val2})")
+
+    return ', '.join(mismatched_columns) if mismatched_columns else None
+
+# Apply function to each row
+df_merged['mismatched_columns'] = df_merged.apply(find_mismatched_columns, axis=1)
+
+# Filter rows where mismatches exist
+df_mismatches = df_merged[['boid', 'version', 'mismatched_columns']].dropna()
+
+# Calculate statistics
+total_rows = len(df_merged)
+total_mismatched_rows = len(df_mismatches)
+mismatch_percentage = (total_mismatched_rows / total_rows) * 100 if total_rows > 0 else 0
+
+# Print statistics
+print(f"Total rows compared: {total_rows}")
+print(f"Total mismatched rows: {total_mismatched_rows}")
+print(f"Mismatch percentage: {mismatch_percentage:.2f}%")
+
+# Save mismatched data to an Excel file
+df_mismatches.to_excel('mismatched_data.xlsx', index=False)
+
+# Count mismatches per column
+mismatch_counts = {col: sum(df_merged.apply(lambda row: row.get(f"{col}_t1") != row.get(f"{col}_t2") 
+                             and not (pd.isna(row.get(f"{col}_t1")) and pd.isna(row.get(f"{col}_t2"))), axis=1)) 
+                   for col in columns_to_compare}
+
+# Print per-column mismatch counts
+print("\nMismatches per column:")
+for col, count in mismatch_counts.items():
+    print(f"{col}: {count} mismatches")
+
